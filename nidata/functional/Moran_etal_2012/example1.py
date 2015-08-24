@@ -6,9 +6,9 @@ sys.path.append('C:/Users/Shuying/nidata')
 import sys
 sys.path.append('C:/Users/Shuying/nidata_path')
 
-from nidata.functional.Moran_etal_2012.datasets import MyDataset
+from nidata.functional.moran_etal_2012.datasets import MoranEtal2012Dataset
 
-# dset = MyDataset()
+# dset = MoranEtal2012Dataset()
 #output_bunch = dset.fetch()
 
 #Filenames to be used
