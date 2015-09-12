@@ -7,6 +7,7 @@ import os.path as _osp
 import sys
 from .core._utils import import_all_submodules as _impall
 
+__version__ = "0.1b"
 
 _script_dir = _osp.dirname(_osp.abspath(__file__))
 _impall(_script_dir, locals(), globals(), recursive=False)

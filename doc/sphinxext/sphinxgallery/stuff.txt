@@ -1,0 +1,23 @@
+
+Hi Ben, 
+
+Updated examples can be found here:
+https://github.com/nipy/nireg/tree/master/examples
+
+At the moment, you will be able to do functional/anatomical rigid registration using nireg (see code sketch above), but it doesn't implement nonrigid registration yet, so it's not recommended for whole-brain subject-atlas realignment at the moment.
+
+
+# Basic structural / functional rigid registration using nireg
+
+import nibabel as nb
+import nireg as nr
+
+fun = nb.load('some_functional_image.nii')
+anat = nb.load('some_T1w_image.nii')
+
+R = nr.HistogramRegistration(fun, anat)
+T = R.optimize('rigid')
+fun_t = nr.resample(fun, T.inv(), reference=anat)
+
+nb.save(funt_t, 'resampled_functional_image.nii')
+Alexis

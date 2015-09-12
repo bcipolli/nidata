@@ -225,6 +225,7 @@ class OasisVbmDataset(HttpDataset):
 
 def fetch_oasis_vbm(n_subjects=None, dartel_version=True,
                     data_dir=None, url=None, resume=True, verbose=1):
+    """blue"""
     return OasisVbmDataset(data_dir=data_dir).fetch(n_subjects=n_subjects,
                                                     dartel_version=dartel_version,
                                                     url=url,
