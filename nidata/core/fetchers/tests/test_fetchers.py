@@ -17,11 +17,11 @@ import nibabel
 from nose import with_setup
 from nose.tools import assert_true, assert_false, assert_equal, assert_raises
 
-from nidata import fetchers
-from nidata._utils import compat
-from nidata._utils.testing import assert_raises_regex
-from nidata._utils.compat import _basestring
-from nidata.fetchers.tests import (mock_request, wrap_chunk_read_,
+from nidata.core.fetchers import http_fetcher as fetchers
+from nidata.core._utils import compat
+from nidata.core._utils.testing import assert_raises_regex
+from nidata.core._utils.compat import _basestring
+from nidata.core.fetchers.tests import (mock_request, wrap_chunk_read_,
                                    FetchFilesMock)
 
 currdir = os.path.dirname(os.path.abspath(__file__))
