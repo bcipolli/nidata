@@ -146,5 +146,5 @@ class HcpDataset(Dataset):
 
         # Massage paths, based on fetcher type.
         files = []
-        self.prepend(src_files,files);
+        self.prepend(src_files,files)
         return self.fetcher.fetch(files, force=force, check=check, verbose=verbose)
