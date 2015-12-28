@@ -1,0 +1,1 @@
+syn_test.rst needs content.
