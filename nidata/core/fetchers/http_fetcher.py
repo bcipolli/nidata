@@ -2,12 +2,14 @@
 """
 
 import contextlib
+import glob
 import os
 import os.path as op
 import tarfile
 import zipfile
 import sys
 import shutil
+import tempfile
 import time
 import hashlib
 import fnmatch
@@ -143,7 +145,7 @@ def _chunk_read_(response, local_file, chunk_size=8192, report_hook=None,
     return
 
 
-def _uncompress_file(file_, delete_archive=True, verbose=1):
+def _uncompress_file(file_, delete_archive=True, verbose=1, dest_dir=None):
     """Uncompress files contained in a data_set.
 
     Parameters
@@ -158,13 +160,15 @@ def _uncompress_file(file_, delete_archive=True, verbose=1):
     verbose: int, optional
         verbosity level (0 means no message).
 
+    dest_dir: string, optional
+        if specified, will dump the files there.
     Notes
     -----
     This handles zip, tar, gzip and bzip files only.
     """
     if verbose > 0:
         print('Extracting data from %s...' % file_)
-    data_dir = op.dirname(file_)
+    dest_dir = dest_dir or op.dirname(file_)
     # We first try to see if it is a zip file
     try:
         filename, ext = op.splitext(file_)
@@ -173,7 +177,7 @@ def _uncompress_file(file_, delete_archive=True, verbose=1):
         processed = False
         if zipfile.is_zipfile(file_):
             z = zipfile.ZipFile(file_)
-            z.extractall(data_dir)
+            z.extractall(dest_dir)
             z.close()
             processed = True
         elif ext == '.gz' or header.startswith(b'\x1f\x8b'):
@@ -195,7 +199,7 @@ def _uncompress_file(file_, delete_archive=True, verbose=1):
 
         if tarfile.is_tarfile(file_):
             with contextlib.closing(tarfile.open(file_, "r")) as tar:
-                tar.extractall(path=data_dir)
+                tar.extractall(path=dest_dir)
             processed = True
         if not processed:
             raise IOError("[Uncompress] unknown archive file format: "
@@ -478,51 +482,52 @@ def fetch_files(data_dir, files, resume=True, force=False, verbose=1,
 
             # First, uncompress.
             if opts.get('uncompress'):
-                target_files = _uncompress_file(fetched_file, verbose=verbose,
-                                                delete_archive=False)
-            else:
-                target_files = [fetched_file]
+                uc_dir = tempfile.mkdtemp()
+                _uncompress_file(fetched_file, verbose=verbose,
+                                 delete_archive=delete_archive,
+                                 dest_dir=uc_dir)
+                if not delete_archive:
+                    shutil.move(fetched_file, data_dir)
+
+                uc_files = glob.glob(op.join(uc_dir, '*'))
+                if len(uc_files) == 1:
+                    shutil.move(uc_files[0], temp_dir)
+                    fetched_file = op.join(temp_dir, op.basename(uc_files[0]))
+                else:
+                    shutil.move(uc_dir, temp_dir)
+                    fetched_file = op.join(temp_dir, op.basename(uc_dir))
 
             if opts.get('move'):
-                raise NotImplementedError('Move options has been removed.')
-
                 # XXX: here, move is supposed to be a dir, it can be a name
                 move_dir = op.join(temp_dir, opts['move'])
 
-                if len(target_files) > 1:
-                    target_files = [op.join(op.dirname(move_dir),
-                                    op.basename(f))
-                                    for f in target_files]
-                    # Do the move
-                else:
-                    if not op.exists(move_dir):
-                        os.makedirs(move_dir)
-                    shutil.move(fetched_file, move_dir)
-                    target_files = [move_dir]
+                if not op.exists(move_dir):
+                    os.makedirs(move_dir)
+                shutil.move(fetched_file, move_dir)
+                fetched_file = move_dir
 
             # Let's examine our work
-            if not op.exists(target_file):
-                if op.exists(fetched_file):
-                    target_dir = op.dirname(target_file)
-                    if not op.exists(target_dir):
-                        os.makedirs(target_dir)
-                    shutil.move(fetched_file, target_file)
-                else:
-                    raise Exception("An error occurred while fetching %s; "
-                                    "the expected target file cannot be found."
-                                    " (%s)\nDebug info: %s" % (
-                                        file_, target_file,
-                                        {'fetched_file': fetched_file,
-                                         'target_files': target_files}))
+            if op.exists(target_file):
+                # Magically, it was there? Strange.
+                pass
 
-            if opts.get('uncompress') and delete_archive:
-                os.remove(fetched_file)
+            elif op.exists(fetched_file):
+                # Most common case: we downloaded, ready
+                # to move to the target location.
+                target_dir = op.dirname(target_file)
+                if not op.exists(target_dir):
+                    os.makedirs(target_dir)
+                shutil.move(fetched_file, target_file)
+            else:
+                raise Exception("An error occurred while fetching %s; "
+                                "the expected target file cannot be found."
+                                " (%s)\nDebug info: %s" % (
+                                    file_, target_file,
+                                    {'fetched_file': fetched_file,
+                                     'target_file': target_file}))
 
             # If needed, move files from temps directory to final directory.
             if op.exists(temp_dir):
-                # XXX We could only moved the files requested
-                # XXX Movetree can go wrong
-                movetree(temp_dir, data_dir)
                 shutil.rmtree(temp_dir)
 
         files_.append(target_file)
